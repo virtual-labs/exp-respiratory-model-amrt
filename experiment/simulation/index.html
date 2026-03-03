@@ -1,13 +1,1291 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-	<!-- Add CSS at the head of HTML file -->
-    <link rel="stylesheet" href="./css/main.css">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Human Respiratory System — Unified Simulator (Pharynx Zoom + Zooms + Spirogram)</title>
+<style>
+  :root{
+    --bg:#d4d9e2; --panel:#0f172a; --ink:#e6eef8; --muted:#94a3b8;
+    --accent:#22d3ee; --accent2:#34d399; --warn:#f59e0b; --grid:#1c2a44;
+    --stroke:#1b2842;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:linear-gradient(180deg,#0a1020,#0e172a 60%,#0a1020);
+    color:var(--ink); font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Header */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 18px;
+    justify-content: flex-start;
+  }
+  .logo { height: 48px; width: auto; margin-right: 8px; flex: 0 0 auto; }
+  header h1 { margin-left: 5%; font-size: 3em; line-height: 1.05; font-weight:700; letter-spacing:.2px;  }
+  .sub{font-size:.9rem; color:var(--muted)}
+
+  .container{display:grid; grid-template-rows:auto 1fr; min-height:100vh}
+
+  /* Tabs */
+  .tabs{display:flex; gap:8px; padding:8px 16px 12px; overflow-x:auto}
+  .tab-btn{background:linear-gradient(180deg,#1a2a4a,#15233e); color:var(--ink); border:1px solid var(--stroke); border-radius:999px; padding:10px 14px; cursor:pointer; font-weight:600; flex:0 0 auto}
+  .tab-btn[aria-selected="true"]{outline:2px solid var(--accent);}
+
+  .panel{display:none; padding:12px;}
+  .panel.active{display:block}
+  .card{background:var(--panel); border:1px solid var(--stroke); border-radius:12px; padding:5px; margin-left: 5%;box-shadow:0 10px 30px rgba(0,0,0,.25);margin-right: 5%;}
+
+  /* Layouts */
+  .overview-grid{display:grid; grid-template-columns:420px 1fr 1fr; gap:16px; align-items:start}
+  .body-wrap{position:relative; width:100%; aspect-ratio:3/3; overflow:hidden}
+  .body{position:absolute; inset:0; background:url("hb.jpg") no-repeat center/contain; border-radius:12px; border:1px solid var(--stroke)}
+  .body-gif{position:absolute; inset:0; display:none; align-items:center; justify-content:center; border-radius:12px; overflow:hidden; background:#0a1322}
+  .body-gif img{width:100%; height:100%; object-fit:contain; display:block}
+  .gif-close{position:absolute; top:8px; right:8px; background:#e74c3c; color:#fff; border:none; border-radius:50%; width:36px; height:36px; cursor:pointer; font-size:18px; z-index:30}
+  .chest-area{position:absolute; top:20%; left:41%; width:20%; height:15%; cursor:pointer; border-radius:50% 50% 60% 60%; background:rgba(255,255,255,.03); outline:2px dashed #37558a66; outline-offset:-6px; z-index:20}
+  .hint{font-size:12px; color:var(--muted); margin-top:8px}
+
+  /* Hide hotspot while gif is open (removes dashed highlight click target) */
+ .chest-area.hidden {
+  display: none !important;
+  outline: none !important;
+  pointer-events: none !important;
+}
+
+  /* Simulator */
+  .simulator-wrapper { display: grid; grid-template-columns:260px 1fr 320px; gap: 16px; align-items: start; }
+  .labels-panel { display:flex; flex-direction:column; gap:8px; min-width:200px; }
+  .label-btn{background:#0c1a33; color:var(--ink); border:1px solid #294772; border-radius:8px; font-size:14px; padding:10px 12px; text-align:left; cursor:pointer}
+  .label-btn.selected{background:#ffe07522; border-color:#ffd000}
+  #description{margin:10px 0; min-height:40px; font-size:13px; padding:8px; background:#0a1428; border-radius:8px; border:1px solid #21385e; display:none}
+
+  .anatomy-column{position:relative; display:flex; flex-direction:column; align-items:center}
+  .anatomy-container{position:relative; width:100%; max-width:520px; display:flex; align-items:center; justify-content:center}
+  #anatomyImg{width:100%; border:1px solid var(--stroke); border-radius:12px; display:block; max-height:70vh; object-fit:contain}
+  #labelOverlay{position:absolute; inset:0; pointer-events:none}
+  .markers{position:absolute; inset:0; pointer-events:none}
+  .marker{position:absolute; transform:translate(-50%,-50%); width:18px; height:18px; border-radius:50%; background:rgba(34,211,238,0.9); border:2px solid rgba(10,20,40,0.9); box-shadow:0 6px 16px rgba(0,0,0,0.45); pointer-events:auto; cursor:pointer}
+  .marker.selected{background:linear-gradient(180deg,#ffd860,#ffc107)}
+  .marker-label{position:absolute; left:24px; top:50%; transform:translateY(-50%); background:rgba(2,8,20,0.9); padding:4px 6px; border-radius:6px; font-size:12px; opacity:0; transition:.15s; white-space:nowrap}
+  .marker:hover .marker-label{opacity:1}
+
+  /* Smoke */
+  .smoke-layer{position:absolute; inset:0; pointer-events:none; z-index:25;}
+  .smoke-dot{
+    position:absolute; width:8px; height:8px; border-radius:50%;
+    background:rgba(160,170,190,0.75);
+    box-shadow:0 2px 8px rgba(0,0,0,0.25);
+    animation:smoke-move var(--dur,1200ms) linear var(--delay,0ms) forwards;
+    opacity:.95;
+  }
+  @keyframes smoke-move{
+    from{transform:translate(0,0);opacity:.95;}
+    to{transform:translate(var(--dx,0px),var(--dy,0px));opacity:0;}
+  }
+
+  /* diaphragm */
+  .diaphragm{position:absolute;left:50%;bottom:6%;transform:translateX(-50%);width:70%;height:44px;background:linear-gradient(180deg,#f09,#c63);border-radius:50%/100%;border:2px solid rgba(0,0,0,0.25);transition:transform .35s ease,height .35s ease;pointer-events:none; z-index:15}
+  .diaphragm.inhale{transform:translateX(-50%) translateY(10px) scaleY(0.7);height:62px}
+  .diaphragm.exhale{transform:translateX(-50%) translateY(-6px) scaleY(1);height:40px}
+
+  /* Zoom modal */
+  .zoom-backdrop{position:fixed;inset:0;background:linear-gradient(180deg, rgba(2,8,20,0.85), rgba(2,8,20,0.95));display:none;align-items:center;justify-content:center;z-index:1000;padding:28px;}
+  .zoom-backdrop.show{display:flex;}
+  .zoom-card{ width:min(1100px,98%); max-height:92%; background:var(--panel); border-radius:12px; padding:16px; border:1px solid var(--stroke); display:flex; gap:18px; overflow:hidden; }
+  .zoom-left{flex:1.6; display:flex; flex-direction:column; gap:8px; align-items:center; justify-content:center; position:relative; overflow:hidden;}
+  .zoom-img-wrap{position:relative; width:100%; max-height:80vh; display:flex; align-items:center; justify-content:center; overflow:hidden; padding:8px;}
+  #zoomImg{max-width:100%; max-height:80vh; width:auto; height:auto; display:block; border-radius:8px; border:1px solid rgba(255,255,255,0.04); transition:transform .35s ease; object-fit:contain;}
+  .zoom-img-zoomed{ transform: scale(1.15); }
+  .zoom-overlay{position:absolute; inset:0; pointer-events:none;}
+  .zoom-markers{position:absolute; inset:0; pointer-events:none;}
+  .zoom-markers .marker{ position:absolute; transform:translate(-50%,-50%); width:14px; height:14px;}
+  .zoom-right{width:300px; overflow:auto; padding:6px; border-left:1px solid rgba(255,255,255,0.03)}
+  .zoom-right h3{margin:0 0 6px 0}
+  .zoom-right .part{padding:8px; border-radius:8px; margin-bottom:8px; background:rgba(255,255,255,0.02); cursor:pointer}
+  .zoom-right .part:hover{outline:1px solid rgba(34,211,238,0.14)}
+  .zoom-close{position:absolute; top:10px; right:10px; background:#e74c3c; border-radius:8px; padding:6px 8px; border:none; cursor:pointer; color:#fff}
+  .small-muted{color:var(--muted); font-size:13px}
+
+  /* Spiro layout */
+  .spirolayout{display:grid; grid-template-columns:360px 1fr; gap:16px}
+  .controls{display:grid; gap:12px; align-content:start}
+  .row{display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center}
+  .row label{font-size:12px; color:var(--muted)}
+  .val{font-variant-numeric:tabular-nums; font-size:12px}
+  .btns{display:flex; gap:8px; flex-wrap:wrap}
+  button, .label-btn, .tab-btn { -webkit-user-select:none; -moz-user-select:none; user-select:none; }
+  .chip{display:inline-block; padding:2px 8px; border:1px solid #294772; border-radius:999px; margin-right:6px; font-size:12px;color:var(--muted)}
+.canvas-wrap{
+  position:relative;
+  min-height:180px;    /* smaller wrapper */
+}
+
+ canvas{
+  width:100%;
+  height:450px;          /* fixed smaller height */
+  min-height:180px;      /* reduced min */
+  background:linear-gradient(180deg,#0c1426,#0b1322);
+  border:1px solid var(--stroke);
+  border-radius:12px;
+  display:block;
+}
+
+  .done{position:absolute; top:10px; right:12px; background:#113; border:1px solid #2a4; color:#bdf7c0; padding:2px 8px; border-radius:999px; display:none}
+
+  /* presets */
+  .presets{display:flex; gap:8px; margin-bottom:6px; flex-wrap:wrap}
+  .preset-btn{padding:8px 12px; border-radius:8px; border:1px solid #294772; background:transparent; color:var(--ink); cursor:pointer; font-size:13px;}
+  .preset-btn.active{outline:2px solid var(--accent); background:rgba(47,215,230,0.05);}
+
+  #diseaseDesc{margin-top:8px;color:var(--muted);font-size:13px; padding:8px; border-radius:8px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.02)}
+
+  .numeric-panel{display:grid; gap:8px; padding:8px; border-radius:8px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.02)}
+  .numeric-row{display:flex; justify-content:space-between; align-items:center; font-size:13px; color:var(--muted)}
+  .numeric-row b{color:var(--ink)}
+
+  /* small utility tweaks for mobile */
+  .card.smallpad{padding:10px;}
+  .label-btn{touch-action:manipulation}
+
+  /* Responsive breakpoints */
+  @media (max-width:1200px){
+    .overview-grid{grid-template-columns: 1fr 1fr; grid-auto-rows: min-content;}
+    .simulator-wrapper { grid-template-columns: 220px 1fr 260px; gap:12px; }
+    .zoom-card{width:min(1000px,98%);}
+  }
+
+  @media (max-width:920px){
+    header { padding:10px 12px; }
+    header h1 { font-size:18px; }
+    .overview-grid{grid-template-columns:1fr; gap:12px;}
+    .simulator-wrapper { grid-template-columns: 1fr; gap:12px; }
+    .labels-panel{flex-direction:row; flex-wrap:wrap; gap:6px; justify-content:flex-start; min-width:0; }
+    .label-btn{font-size:13px; padding:8px 10px; flex: 1 0 auto;}
+    .card{margin:0;}
+    .zoom-right{width:100%; border-left:none; border-top:1px solid rgba(255,255,255,0.03); max-height:240px; overflow:auto;}
+    .zoom-card{flex-direction:column; max-height:95vh; padding:12px;}
+    .zoom-left{width:100%}
+    .zoom-img-wrap{max-height:50vh}
+    .anatomy-container{max-width:calc(100% - 24px);}
+    .spirolayout{grid-template-columns:1fr; }
+    .controls{order:2}
+    .canvas-wrap{order:1}
+    .preset-btn{padding:8px 10px}
+  }
+
+  @media (max-width:600px){
+    header { gap:8px; padding:8px 10px; }
+    .logo { height:36px; }
+    header h1 { font-size:16px; }
+    .label-btn{padding:8px; font-size:13px}
+    .diaphragm{height:36px}
+    .diaphragm.inhale{height:48px}
+    .marker{width:14px; height:14px}
+    .zoom-img-zoomed{ transform: scale(1.05); }
+    .gif-close{width:32px; height:32px; font-size:16px}
+    canvas{min-height:220px}
+    .zoom-backdrop{padding:10px;}
+    .zoom-card{padding:10px; border-radius:10px;}
+    .zoom-right{max-height:220px}
+    .numeric-panel{font-size:13px}
+    .preset-btn{font-size:12px}
+  }
+
+  @media (max-width:420px){
+    .zoom-card{ width: 100%; max-height:100vh; border-radius:0; padding:8px; }
+    .zoom-backdrop{align-items:flex-start; padding-top:12px;}
+    .zoom-img-wrap{padding:4px; max-height:60vh}
+    .zoom-close{top:8px; right:8px}
+  }
+
+  /* ensure focus outlines are visible for keyboard users */
+  :focus { outline: 2px solid rgba(47,215,230,0.22); outline-offset:2px; }
+
+    .cardsmallpad{background:var(--panel); border:1px solid var(--stroke); border-radius:16px; padding:5px; box-shadow:0 10px 30px rgba(0,0,0,.25); margin-left: 10%;margin-right: 10%;width: 100%;height:50%;}
+
+</style>
 </head>
 <body>
-		<!-- Your code goes here-->
+<header>
+       <img src="images\logo.png" width="200" height="100" class="logo"style="vertical-align:middle;margin:3px; margin-left:3%">
+  <h1>Human Respiratory System Model</h1>
+</header>
 
-	<!-- Add JS at the bottom of HTML file --> 
-        <script src="./js/main.js"></script>
+<div class="container" id="mainContainer">
+  <nav class="tabs" aria-label="Main tabs">
+    <button class="tab-btn" id="tab-overview" aria-selected="true">Breathing Demo</button>
+    <button class="tab-btn" id="tab-anatomy" aria-selected="false">Anatomy Explorer</button>
+    <button class="tab-btn" id="tab-spiro" aria-selected="false">Spirogram</button>
+  </nav>
+
+  <!-- Overview -->
+  <section class="panel active" id="panel-overview">
+    <div class="overview-grid">
+       <div class="cardsmallpad">
+          <h3 style="margin:0 0 8px">Instructions</h3>
+          <ol style="margin:6px 0 0 18px; color:var(--muted)">
+            <li>Tap/click the highlighted chest region to view animated lungs; press × to close.</li>
+            <li>Switch to “Anatomy Explorer” to see interactive labels and smoke flow.</li>
+            <li>Use “Spirogram” to simulate volume–time breathing curves.</li>
+          </ol>
+        </div>
+
+        <div class="cardsmallpad">
+          <h2 style="margin-top:0;font-size:1.05rem">Human Respiratory System</h2>
+          <p class="sub">
+            Respiration is the process by which oxygen is taken in and carbon dioxide is given out. The first breath occurs after birth;
+            <b>fetal lungs</b> are non-functional and gas exchange occurs via the placenta.
+          </p>
+          <div class="legend" style="color:var(--muted); font-size:0.95rem">
+            <ul style="margin:0 0 6px 0; padding-left:18px;"><li><b>TYPES OF RESPIRATION</b></li></ul>
+            1) External respiration: exchange between lungs and blood. <br>
+            2) Internal respiration: exchange between blood and tissues.
+            <ul style="margin-top:8px; padding-left:18px"><li><b>PHASES OF RESPIRATION</b></li></ul>
+            1) Inspiration: air enters lungs. <br>
+            2) Expiration: air leaves lungs.
+          </div>
+        </div>
+
+      <div class="cardsmallpad">
+        <h3 style="margin:6px 0">Breathing Demo</h3>
+        <div class="body-wrap" aria-hidden="false">
+          <div class="body" id="bodyBg" role="img" aria-label="Torso background"></div>
+
+          
+
+          <div class="body-gif" id="bodyGif" aria-hidden="true">
+            <button class="gif-close" id="closeGif" aria-label="Close animation">×</button>
+            <!-- original gif (kept) — will be swapped to cleaned version when opened -->
+            <img id="gifImg" src="edited.gif" alt="Lungs Animation">
+          </div>
+
+          <button class="chest-area" id="chestArea" aria-label="Open lung animation"></button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Anatomy -->
+  <section class="panel" id="panel-anatomy">
+    <div class="card">
+      <div class="simulator-wrapper">
+        <div class="labels-panel" aria-hidden="false">
+          <h3 style="margin:0 0 6px">Upper Respiratory System</h3>
+          <button class="label-btn" data-idx="0">Nasal Cavity</button>
+          <button class="label-btn" data-idx="1" id="pharynxBtn">Pharynx</button>
+          <button class="label-btn" data-idx="2" id="larynxBtn">Larynx</button>
+          <h3 style="margin-top:10px">Lower Respiratory System</h3>
+          <button class="label-btn" data-idx="3">Trachea</button>
+          <button class="label-btn" data-idx="4">Bronchi</button>
+          <button class="label-btn" data-idx="5">Right Lung</button>
+          <button class="label-btn" data-idx="6" id="leftLungBtn">Left Lung</button>
+          <button class="label-btn" data-idx="7">Bronchioles</button>
+          <button class="label-btn" data-idx="8">Alveoli</button>
+          <button class="label-btn" data-idx="9">Diaphragm</button>
+        </div>
+
+        <div class="anatomy-column">
+          <div class="anatomy-container" style="width:100%;">
+            <img src="images\anatomy.jpg" id="anatomyImg" alt="Lung Anatomy">
+            <svg id="labelOverlay" width="100%" height="100%"></svg>
+            <div id="smokeLayer" class="smoke-layer" aria-hidden="true"></div>
+            <div class="markers" id="markersContainer" aria-hidden="false"></div>
+          </div>
+           <div id="description"></div>
+        </div>
+
+        <div class="card" style="min-width:500px;margin-left: -55%;">
+          <h3 style="margin:0 0 6px">Instructions</h3>
+          <p style="margin:6px 0">1. Click any part to see airflow animation.</p>
+          <p style="margin:6px 0">2. Double-click Pharynx / Larynx / Left Lung to open zoomed images with subparts.</p>
+          
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Spiro (FULL) -->
+  <section class="panel" id="panel-spiro">
+    <div class="card">
+      <div class="spirolayout">
+        <section class="controls" aria-label="Spirogram controls">
+          <div class="presets" role="tablist" aria-label="Presets">
+            <button class="preset-btn" id="presetCOPD" aria-pressed="false">COPD</button>
+            <button class="preset-btn" id="presetFibrosis" aria-pressed="false">Fibrotic</button>
+            <button class="preset-btn" id="presetTB" aria-pressed="false">Tuberculosis</button>
+          </div>
+
+          <div class="numeric-panel" aria-hidden="false">
+            <div class="numeric-row"><span><b>Respiratory Rate (RR)</b></span><span id="rateVal">12</span> breaths/min</div>
+            <div class="numeric-row"><span><b>Tidal Volume (VT)</b></span><span id="vtVal">500</span> mL</div>
+            <div class="numeric-row"><span><b>Functional Residual Capacity (FRC)</b></span><span id="frcVal">2400</span> mL</div>
+            <div class="numeric-row"><span><b>Total Duration</b></span><span id="durVal">20</span> s</div>
+          </div>
+
+          <div style="margin-top:8px" class="row">
+            <div class="btns" role="group" aria-label="Simulation controls">
+              <button id="start" style="padding:8px 12px;border-radius:8px;background:#1a73e8;border:none;color:white;cursor:pointer">Start</button>
+              <button id="pause" style="padding:8px 12px;border-radius:8px;background:#6b7280;border:none;color:white;cursor:pointer">Pause</button>
+              <button id="reset" style="padding:8px 12px;border-radius:8px;background:#374151;border:none;color:white;cursor:pointer">Reset</button>
+              <button id="snapshot" style="padding:8px 12px;border-radius:8px;background:#0f5132;border:none;color:white;cursor:pointer">Save PNG</button>
+            </div>
+          </div>
+
+          <hr style="border-color:#1b2842; opacity:.5">
+
+          <div class="sub">
+            <span class="chip">VT</span> Air moved in/out during normal breath.<br>
+            <span class="chip">RR</span> Number of breaths per minute<br>
+            <span class="chip">FRC </span>The volume of air remaining in the lungs after a normal, passive exhalation
+          </div>
+        </section>
+
+        <section class="canvas-wrap" aria-live="polite">
+          <div style="position:absolute; top:10px; left:17px; margin-left:5%;font-size:12px; color:var(--muted)">
+            <span class="chip">Spirogram (Volume–Time)</span>
+            <div><b>Y:</b> Volume (mL) &nbsp;&nbsp; <b>X:</b> Time (s)</div>
+          </div>
+          <div id="done" class="done" role="status" aria-hidden="true">Completed</div>
+          <canvas id="plot" role="img" aria-label="Spirogram plot"></canvas>
+          <div id="diseaseDesc">Select a preset to view a representative spirogram pattern and a short description. Healthy (reference) curve is shown with each disease preset; disease live trace appears only after pressing Start.</div>
+        </section>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Zoom modal -->
+<div class="zoom-backdrop" id="zoomView" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="zoom-card" id="zoomCard">
+    <div class="zoom-left">
+      <button class="zoom-back" id="zoomBack" style="display:none;">← Back</button>
+      <div class="zoom-img-wrap" id="zoomImgWrap">
+        <img id="zoomImg" src="images\pharynx_3.png" alt="Zoom">
+        <svg class="zoom-overlay" id="zoomOverlay" width="100%" height="100%"></svg>
+        <div class="zoom-markers" id="zoomMarkers"></div>
+        <div class="zoom-smoke-layer" id="zoomSmokeLayer" aria-hidden="true"></div>
+      </div>
+    </div>
+    <div class="zoom-right">
+      <h3 id="zoomTitle">Zoom</h3>
+      <button class="zoom-close" id="zoomClose" aria-label="Close zoom">Close</button>
+      <div class="small-muted">Click a subpart to highlight and read description.</div>
+      <div id="partsList"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------------------
+   Basic UI & tabs
+   --------------------- */
+const tabs = [
+  { btn: document.getElementById("tab-overview"), panel: document.getElementById("panel-overview") },
+  { btn: document.getElementById("tab-anatomy"), panel: document.getElementById("panel-anatomy") },
+  { btn: document.getElementById("tab-spiro"), panel: document.getElementById("panel-spiro") }
+];
+tabs.forEach(({ btn, panel }) => {
+  btn.addEventListener("click", () => {
+    tabs.forEach(({ btn, panel }) => {
+      btn.setAttribute("aria-selected", "false");
+      panel.classList.remove("active");
+    });
+    btn.setAttribute("aria-selected", "true");
+    panel.classList.add("active");
+    if (panel.id === "panel-anatomy") requestAnimationFrame(recreateMarkers);
+  });
+});
+
+/* ---------------------
+   Lungs GIF — show cleaned gif + hide chest hotspot while open
+   --------------------- */
+const chest = document.getElementById('chestArea');
+const bodyBg = document.getElementById('bodyBg');
+const bodyGif = document.getElementById('bodyGif');
+const closeGif = document.getElementById('closeGif');
+const gifImg = document.getElementById('gifImg');
+
+// cleaned gif filename (ensure file exists)
+const CLEAN_GIF = 'edited.gif';
+
+if (chest) {
+  chest.addEventListener('click', () => {
+
+    if (bodyBg) bodyBg.style.visibility = 'hidden';
+
+    if (bodyGif) {
+      gifImg.src = "images\CLEAN_GIF";           
+      bodyGif.style.display = 'flex';
+      bodyGif.setAttribute('aria-hidden','false');
+    }
+
+    // hide hotspot and remove its outline
+    chest.classList.add('hidden');
+
+    // prevent focus ring / outline from showing after click
+    chest.blur();                   
+    chest.style.outline = 'none';   
+  });
+}
+
+
+if (closeGif) {
+  closeGif.addEventListener('click', () => {
+
+    if (bodyGif) bodyGif.style.display = 'none';
+    if (bodyBg) bodyBg.style.visibility = 'visible';
+    if (bodyGif) bodyGif.setAttribute('aria-hidden','true');
+
+    // restore hotspot and reset outline property
+    if (chest) {
+      chest.classList.remove('hidden');
+      chest.style.outline = '';     // reset so default behaviour returns cleanly
+    }
+  });
+}
+
+
+/* ---------------------
+   Anatomy labels
+   --------------------- */
+const anatomyLabels = [
+ {name:'Nasal Cavity',x:170,y:90,desc:'Paired air-filled spaces lined with ciliated mucosa and conchae; warms, humidifies, and filters inspired air while housing olfactory receptors.'},
+ {name:'Pharynx',x:240,y:120,desc:'Muscular tube behind nasal/oral cavities, divided into nasopharynx, oropharynx, and laryngopharynx; serves as a common pathway for air and food.'},
+ {name:'Larynx',x:230,y:198,desc:'Cartilaginous voice box connecting pharynx to trachea; contains vocal cords for phonation and protects airway during swallowing.'},
+ {name:'Trachea',x:230,y:230,desc:'Flexible tube (10-12 cm) with C-shaped cartilage rings, extending from larynx (C6) to carina (T5); conducts air to bronchi.'},
+ {name:'Bronchi',x:250,y:340,desc:'Right (shorter, wider) and left main bronchi branch from trachea; conduct air into lungs with cartilage support and ciliated lining.'},
+ {name:'Right Lung',x:180,y:300,desc:'Three lobes, larger and shorter due to liver; receives air via right main bronchus and performs gas exchange.'},
+ {name:'Left Lung',x:300,y:300,desc:'Two lobes, narrower due to heart; receives air via left main bronchus and participates in gas exchange.'},
+ {name:'Bronchioles',x:277,y:400,desc:'Smaller airways (<1 mm) without cartilage, branching from bronchi; regulate airflow via smooth muscle constriction.'},
+ {name:'Alveoli',x:300,y:430,desc:'Tiny air sacs (300 million) at bronchiolar terminals; thin-walled sites of O₂-CO₂ gas exchange with pulmonary capillaries.'},
+ {name:'Diaphragm',x:230,y:480,desc:'Dome-shaped skeletal muscle separating thorax from abdomen; primary muscle of inspiration, flattening to increase thoracic volume.'}
+];
+const overlay = document.getElementById('labelOverlay');
+const descDiv = document.getElementById('description');
+
+function renderOverlay(sel=null){
+  const img = document.getElementById('anatomyImg');
+  if (!img) return;
+  const r = img.getBoundingClientRect();
+  overlay.innerHTML = '';
+  anatomyLabels.forEach((lab,i)=>{
+    const cx = lab.x * r.width/460, cy = lab.y * r.height/640;
+    const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx', cx); c.setAttribute('cy', cy);
+    c.setAttribute('r', sel===i?Math.max(8, r.width*0.035):Math.max(5, r.width*0.02));
+    c.setAttribute('fill', sel===i?'rgba(255,215,0,0.45)':'rgba(34,211,238,0.12)');
+    overlay.appendChild(c);
+  });
+}
+
+/* ---------------------
+   Smoke helpers
+   --------------------- */
+const smokeLayer = document.getElementById('smokeLayer');
+function scaledCoords(x,y){
+  const img = document.getElementById('anatomyImg');
+  if (!img) return {x:0,y:0};
+  const r = img.getBoundingClientRect();
+  return { x: x * r.width/460, y: y * r.height/640 };
+}
+function clearAllSmoke(){ if (smokeLayer) smokeLayer.innerHTML = ''; }
+
+function getSourceDesignCoords(i){
+  switch(i){
+    case 0:return{x:100,y:120};
+    case 1:return{x:170,y:90};
+    case 2:return{x:240,y:120};
+    case 3:return{x:230,y:200};
+    case 4:return{x:230,y:230};
+    case 5:return{x:240,y:340};
+    case 6:return{x:260,y:340};
+    case 7:return{x:250,y:340};
+    case 8:return{x:277,y:400};
+    default:return null;
+  }
+}
+function emitSmokeTo(x,y,opts={}){ // x,y are design coords target
+  const src = opts.src; if(!src) return;
+  const s = scaledCoords(src.x,src.y), t = scaledCoords(x,y);
+  const count = opts.count||10;
+  for(let i=0;i<count;i++){
+    const dot = document.createElement('div'); dot.className='smoke-dot';
+    const jx = (Math.random()-.5)*6, jy = (Math.random()-.5)*6;
+    dot.style.left = `${s.x + jx}px`; dot.style.top = `${s.y + jy}px`;
+    const dx = (t.x - s.x) + jx, dy = (t.y - s.y) + jy - 10;
+    dot.style.setProperty('--dx', dx+'px'); dot.style.setProperty('--dy', dy+'px');
+    dot.style.setProperty('--dur', 900 + Math.random()*800 + 'ms');
+    dot.style.setProperty('--delay', Math.random()*200 + 'ms');
+    dot.addEventListener('animationend', ()=> dot.remove());
+    if (smokeLayer) smokeLayer.appendChild(dot);
+  }
+}
+
+/* ---------------------
+   Diaphragm control & inhale/exhale buttons
+   --------------------- */
+const diaphragm = document.getElementById('diaphragm');
+const inhaleBtn = document.getElementById('inhaleBtn');
+const exhaleBtn = document.getElementById('exhaleBtn');
+
+let inhaleInterval = null;
+let exhaleInterval = null;
+
+function startInspiration(){
+  if (diaphragm){
+    diaphragm.classList.remove('exhale');
+    diaphragm.classList.add('inhale');
+  }
+  clearAllSmoke();
+  const pathTargets = [
+    {x:240,y:120}, // pharynx
+    {x:240,y:200}, // larynx region
+    {x:240,y:300}  // toward lungs
+  ];
+  let idx = 0;
+  if (inhaleInterval) clearInterval(inhaleInterval);
+  inhaleInterval = setInterval(()=>{
+    const t = pathTargets[idx % pathTargets.length];
+    const src = getSourceDesignCoords(1) || {x:170,y:90};
+    emitSmokeTo(t.x, t.y, {count:10, src});
+    idx++;
+  }, 420);
+}
+
+function stopInspiration(){
+  if (diaphragm) diaphragm.classList.remove('inhale');
+  if (inhaleInterval){ clearInterval(inhaleInterval); inhaleInterval = null; }
+}
+
+function startExpiration(){
+  if (diaphragm){
+    diaphragm.classList.remove('inhale');
+    diaphragm.classList.add('exhale');
+  }
+  const lungSourceDesign = {x:260, y:340};
+  let cnt = 0;
+  if (exhaleInterval) clearInterval(exhaleInterval);
+  exhaleInterval = setInterval(()=>{
+    const targets = [{x:240,y:200}, {x:240,y:120}, {x:170,y:90}];
+    const target = targets[cnt % targets.length];
+    emitSmokeTo(target.x, target.y, { count: 12, src: lungSourceDesign });
+    cnt++;
+  }, 420);
+}
+
+function stopExpiration(){
+  if (diaphragm) diaphragm.classList.remove('exhale');
+  if (exhaleInterval){ clearInterval(exhaleInterval); exhaleInterval = null; }
+}
+
+if (inhaleBtn) {
+  inhaleBtn.addEventListener('mousedown', () => { startInspiration(); });
+  inhaleBtn.addEventListener('mouseup', () => { stopInspiration(); });
+  inhaleBtn.addEventListener('click', (e)=>{
+    e.preventDefault();
+    startInspiration();
+    setTimeout(() => stopInspiration(), 1600);
+  });
+}
+if (exhaleBtn) {
+  exhaleBtn.addEventListener('mousedown', () => { startExpiration(); });
+  exhaleBtn.addEventListener('mouseup', () => { stopExpiration(); });
+  exhaleBtn.addEventListener('click', (e)=>{
+    e.preventDefault();
+    startExpiration();
+    setTimeout(()=> stopExpiration(), 1600);
+  });
+}
+
+/* ---------------------
+   Marker creation on main anatomy
+   --------------------- */
+function recreateMarkers(){
+  const mc = document.getElementById('markersContainer'); if (!mc) return;
+  mc.innerHTML = '';
+  const img = document.getElementById('anatomyImg'); if (!img) return;
+  const r = img.getBoundingClientRect();
+  anatomyLabels.forEach((lab,i)=>{
+    const m = document.createElement('div'); m.className='marker';
+    m.style.left = (lab.x * r.width/460) + 'px';
+    m.style.top  = (lab.y * r.height/640) + 'px';
+    const lbl = document.createElement('div'); lbl.className='marker-label'; lbl.textContent = lab.name; m.appendChild(lbl);
+    m.onclick = ()=> { const btn = document.querySelector(`.label-btn[data-idx="${i}"]`); if(btn) btn.click(); };
+    mc.appendChild(m);
+  });
+}
+
+/* ---------------------
+   Generic zoom modal logic
+   --------------------- */
+const zoomView = document.getElementById('zoomView');
+const zoomImg  = document.getElementById('zoomImg');
+const zoomMarkers = document.getElementById('zoomMarkers');
+const partsList = document.getElementById('partsList');
+const zoomClose = document.getElementById('zoomClose');
+const zoomSmokeLayer = document.getElementById('zoomSmokeLayer');
+const zoomTitle = document.getElementById('zoomTitle');
+const zoomCard = document.getElementById('zoomCard');
+const zoomImgWrap = document.getElementById('zoomImgWrap');
+const mainContainer = document.getElementById('mainContainer');
+
+let currentZoomParts = []; // will hold the parts array for the currently shown zoom
+let zoomMarkerPositions = []; // cached marker pixel positions relative to wrap
+let __lastFocused = null; // save previously focused element to restore
+let focusTrapHandler = null; // for keydown trap
+
+function buildZoomUI(partsArray){
+  partsList.innerHTML = '';
+  partsArray.forEach((p, idx) => {
+    const d = document.createElement('div');
+    d.className = 'part';
+    d.innerHTML = `<b>${p.name}</b><div class="small-muted">${p.desc || ''}</div>`;
+    d.onclick = () => highlightZoomPart(idx);
+    partsList.appendChild(d);
+  });
+}
+
+function computeZoomMarkerPositions(){
+  zoomMarkerPositions = [];
+  if (!zoomImg) return;
+  const imgRect = zoomImg.getBoundingClientRect();
+  const wrapRect = zoomImgWrap.getBoundingClientRect();
+  if (!imgRect.width || !imgRect.height) return;
+  currentZoomParts.forEach(p => {
+    const imgLeft = imgRect.left - wrapRect.left;
+    const imgTop = imgRect.top - wrapRect.top;
+    const px = imgLeft + (p.x / 100) * imgRect.width;
+    const py = imgTop + (p.y / 100) * imgRect.height;
+    zoomMarkerPositions.push({ x: px, y: py });
+  });
+}
+
+function placeZoomMarkers(selectedIdx = -1){
+  if (!zoomMarkers) return;
+  if (!zoomMarkerPositions.length) computeZoomMarkerPositions();
+  if (!zoomMarkerPositions.length) return;
+
+  if (zoomMarkers.children.length === currentZoomParts.length) {
+    currentZoomParts.forEach((p, idx) => {
+      const dot = zoomMarkers.children[idx];
+      if (!dot) return;
+      const pos = zoomMarkerPositions[idx];
+      dot.style.left = (pos ? pos.x + 'px' : '0px');
+      dot.style.top  = (pos ? pos.y + 'px' : '0px');
+      dot.style.width = (idx===selectedIdx? '20px' : '14px');
+      dot.style.height = (idx===selectedIdx? '20px' : '14px');
+      if (idx === selectedIdx) dot.classList.add('selected'); else dot.classList.remove('selected');
+    });
+    return;
+  }
+
+  zoomMarkers.innerHTML = '';
+  currentZoomParts.forEach((p, idx) => {
+    let pos = zoomMarkerPositions[idx];
+    if (!pos) {
+      const imgRect = zoomImg.getBoundingClientRect();
+      const px = (p.x/100) * imgRect.width;
+      const py = (p.y/100) * imgRect.height;
+      pos = { x: px, y: py };
+    }
+    const dot = document.createElement('div'); dot.className = 'marker';
+    dot.style.left = pos.x + 'px';
+    dot.style.top  = pos.y + 'px';
+    dot.style.width = (idx===selectedIdx? '20px' : '14px');
+    dot.style.height = (idx===selectedIdx? '20px' : '14px');
+    const lbl = document.createElement('div'); lbl.className = 'marker-label'; lbl.textContent = p.name;
+    dot.appendChild(lbl);
+    dot.onclick = (ev) => { ev.stopPropagation(); highlightZoomPart(idx); };
+    zoomMarkers.appendChild(dot);
+  });
+}
+
+function highlightZoomPart(idx){
+  Array.from(partsList.children).forEach((el,i)=> el.style.outline = i===idx ? '2px solid rgba(34,211,238,0.18)' : 'none');
+  placeZoomMarkers(idx);
+  const selEl = partsList.children[idx];
+  if (selEl) selEl.scrollIntoView({behavior:'smooth', block:'center'});
+  const p = currentZoomParts[idx];
+  if (p) descDiv.innerHTML = `<b>${p.name}</b><br>${p.desc}`; descDiv.style.display = 'block';
+}
+
+/* inert fallback & focus restore */
+function setBackgroundInert(inert = true){
+  const root = mainContainer;
+  if (!root) return;
+  if ('inert' in HTMLElement.prototype) {
+    root.inert = !!inert;
+  } else {
+    if (inert) {
+      root.setAttribute('aria-hidden','true');
+      const focusables = Array.from(root.querySelectorAll('a, button, input, select, textarea, [tabindex]'));
+      focusables.forEach(el => {
+        if (zoomView.contains(el)) return;
+        if (el.hasAttribute('tabindex')) el.dataset.__prevTab = el.getAttribute('tabindex');
+        el.dataset.__wasFocusable = '1';
+        try { el.setAttribute('tabindex','-1'); } catch(e){}
+      });
+    } else {
+      root.removeAttribute('aria-hidden');
+      const restored = Array.from(root.querySelectorAll('[data-__wasFocusable]'));
+      restored.forEach(el => {
+        if (el.dataset.__prevTab !== undefined) {
+          el.setAttribute('tabindex', el.dataset.__prevTab);
+          delete el.dataset.__prevTab;
+        } else {
+          el.removeAttribute('tabindex');
+        }
+        delete el.dataset.__wasFocusable;
+      });
+    }
+  }
+}
+
+function enableFocusTrap(modalRoot){
+  const focusableSelector = 'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  const nodes = Array.from(modalRoot.querySelectorAll(focusableSelector));
+  if (!nodes.length) return;
+  const first = nodes[0];
+  const last = nodes[nodes.length - 1];
+
+  focusTrapHandler = function(e){
+    if (e.key !== 'Tab') return;
+    if (e.shiftKey) {
+      if (document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      }
+    } else {
+      if (document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+  };
+  document.addEventListener('keydown', focusTrapHandler);
+}
+
+function disableFocusTrap(){
+  if (focusTrapHandler) {
+    document.removeEventListener('keydown', focusTrapHandler);
+    focusTrapHandler = null;
+  }
+}
+
+function openZoom(imageSrc, title, partsArray, autoZoom=true){
+  currentZoomParts = partsArray.slice();
+  if (zoomTitle) zoomTitle.textContent = title || 'Zoom';
+  if (zoomImg) {
+    zoomImg.src = imageSrc || '';
+  }
+
+  __lastFocused = document.activeElement;
+  setBackgroundInert(true);
+
+  if (zoomView) zoomView.dataset.zoom = title || '';
+
+  buildZoomUI(currentZoomParts);
+
+  if (!zoomView) return;
+  zoomView.classList.add('show');
+  zoomView.removeAttribute('aria-hidden');
+
+  const kick = ()=> {
+    computeZoomMarkerPositions();
+    placeZoomMarkers(-1);
+    if (zoomClose && typeof zoomClose.focus === 'function') zoomClose.focus({ preventScroll: true });
+    enableFocusTrap(zoomView);
+    if (autoZoom && zoomImg) setTimeout(()=> zoomImg.classList.add('zoom-img-zoomed'), 80);
+  };
+  if (zoomImg && zoomImg.complete) setTimeout(kick, 120);
+  else if (zoomImg) zoomImg.addEventListener('load', ()=> setTimeout(kick,120), {once:true});
+  window.addEventListener('resize', onWindowResizeForZoom);
+}
+
+function closeZoom(){
+  if (!zoomView) return;
+  zoomView.classList.remove('show');
+  if (zoomView && zoomView.dataset && zoomView.dataset.zoom) delete zoomView.dataset.zoom;
+  if (zoomImg) zoomImg.classList.remove('zoom-img-zoomed');
+  if (zoomMarkers) zoomMarkers.innerHTML = '';
+  if (partsList) partsList.innerHTML = '';
+
+  disableFocusTrap();
+  setBackgroundInert(false);
+
+  try {
+    if (__lastFocused && document.contains(__lastFocused) && typeof __lastFocused.focus === 'function') {
+      __lastFocused.focus({ preventScroll: true });
+    } else {
+      const maybe = document.querySelector('.label-btn');
+      if (maybe) maybe.focus({ preventScroll: true });
+    }
+  } catch (err) {}
+  finally { __lastFocused = null; }
+
+  renderOverlay();
+  recreateMarkers();
+  window.removeEventListener('resize', onWindowResizeForZoom);
+}
+
+if (zoomClose) zoomClose.addEventListener('click', closeZoom);
+if (zoomView) zoomView.addEventListener('click', (e)=> {
+  const wrap = document.querySelector('.zoom-img-wrap');
+  if (!wrap.contains(e.target)) closeZoom();
+});
+
+function onWindowResizeForZoom(){
+  computeZoomMarkerPositions();
+  if (zoomMarkers && zoomMarkers.children.length === currentZoomParts.length){
+    currentZoomParts.forEach((p, idx)=>{
+      const pos = zoomMarkerPositions[idx];
+      if (!pos) return;
+      const dot = zoomMarkers.children[idx];
+      dot.style.left = pos.x + 'px'; dot.style.top = pos.y + 'px';
+    });
+  } else {
+    placeZoomMarkers(-1);
+  }
+}
+
+/* Pre-configured zoom parts (unchanged) */
+const pharynxParts = [
+  { name: 'Sphenoidal Sinus', x:44, y:16, desc: 'One of the paired air-filled cavities within the sphenoid bone behind the nasal cavity; helps lighten the skull, humidify and warm inhaled air, and contributes to voice resonance.' },
+  { name: 'Nasopharynx', x:60, y:46, desc: 'The uppermost section of the pharynx, located behind the nasal cavity; a respiratory passage that connects the nose to the oropharynx and houses the pharyngeal tonsil and Eustachian tube openings.' },
+  { name: 'Nasal Meatus - Superior', x:25, y:15, desc: 'The uppermost passageway beneath the superior nasal concha; drains posterior ethmoidal sinuses and helps channel airflow high in the nasal cavity.' },
+  { name: 'Nasal Meatus- Middle', x:25, y:22, desc: 'The middle nasal passage beneath the middle concha; important drainage route for the frontal and maxillary sinuses and a key pathway for airflow.' },
+  { name: 'Nasal Meatus- Inferior', x:25, y:30, desc: 'The lowermost nasal passage beneath the inferior concha; receives drainage from the nasolacrimal duct and conducts most of the inhaled airflow.' },
+  { name: 'Pharyngeal tonsil (Adenoid)', x:64, y:39, desc: 'A patch of lymphoid tissue on the roof/posterior wall of the nasopharynx that participates in immune surveillance of inhaled or swallowed pathogens (can enlarge in children).' },
+  { name: 'Oropharynx', x:59, y:75, desc: 'The middle pharyngeal compartment behind the oral cavity that serves as a shared route for food and air; contains the palatine tonsils and is involved in swallowing and vocal resonance.' },
+  { name: 'Uvula', x:48, y:54, desc: 'A small conical projection hanging from the soft palate’s posterior edge; helps direct the flow of food and liquids during swallowing and contributes to speech articulation and gag reflex.' },
+  { name: 'Fauces (Isthmus of Fauces)', x:48, y:68, desc: 'The narrow opening between the oral cavity and the oropharynx bounded by the soft palate and palatoglossal arches; provides the passage for food and air between mouth and throat.'},
+  { name: 'Laryngopharynx (Hypopharynx)', x:46, y:110, desc: 'The lowest pharyngeal region that lies behind the larynx and above the esophagus; routes food to the esophagus while allowing air into the larynx.' },
+  { name: 'Epiglottis', x:42.5, y:80, desc: 'A leaf-shaped cartilaginous flap that folds over the laryngeal inlet during swallowing to prevent aspiration of food into the airway.' }
+];
+
+const larynxParts = [
+  { name: 'Supraglottis', x:70, y:40, desc: 'The uppermost larynx region above the vocal cords, including epiglottis and false cords; protects airway and aids phonation.' },
+  { name: 'Vocal cord', x:66, y:47.5, desc: 'Paired muscular folds in the larynx that vibrate to produce sound and close to protect the airway during swallowing.' },
+  { name: 'Glottis', x:70.5, y:45, desc: 'The opening between the true vocal cords; critical for voice production, breathing, and airway protection.' },
+  { name: 'Subglottis', x:67, y:54, desc: 'The lower larynx from vocal cords to the first tracheal ring; transitions to trachea and supports airway structure.' },
+  { name: 'Esophagus', x:86, y:50, desc: 'A 25 cm muscular tube connecting pharynx to stomach; propels food via peristalsis, posterior to the larynx.' }
+];
+
+const leftLungParts = [
+   { name: 'Anular ligaments of trachea', x:9, y:13, desc: 'Circular fibrous ligaments connecting the posterior ends of the C-shaped tracheal cartilages; provide flexibility and maintain tracheal patency.' },
+   { name: 'Tracheal bifurcation', x:11, y:35, desc: 'The point at vertebral level T4-T5 (sternal angle) where the trachea divides into right and left main bronchi; also called the carina internally.' },
+   { name: 'Right main bronchus', x:4, y:40, desc: 'Shorter (~2.5 cm), wider, and more vertical than the left; enters right lung at T5, more prone to foreign body aspiration.' },
+   { name: 'Carina of trachea', x:12, y:39, desc: 'Keel-like ridge at the tracheal bifurcation inside the lumen; lined with sensitive mucosa that triggers violent coughing when stimulated.' },
+   { name: 'Left main bronchus', x:21, y:40, desc: 'Longer (~5 cm), narrower, and more horizontal; passes beneath the aortic arch before entering left lung at T6 level.' },
+   { name: 'Left superior lobar bronchus', x:40, y:49, desc: 'Also called left upper lobe bronchus; arises from left main bronchus and divides into superior and inferior (lingular) divisions for the left upper lobe.' },
+   { name: 'Left inferior lobar bronchus', x:36, y:55, desc: 'Secondary bronchus supplying the left lower lobe; branches into five segmental bronchi corresponding to the lobe’s segments.' },
+   { name: 'Left upper lobe', x:59, y:22, desc: 'Smaller lobe with two divisions (upper and lingular); contains four bronchopulmonary segments and occupies the upper left hemithorax.' },
+   { name: 'Left lower lobe', x:75, y:80, desc: 'Larger lobe posterior and inferior to the oblique fissure; contains five bronchopulmonary segments, similar to the right lower lobe.' },
+   { name: 'Apex', x:48.5, y:18, desc: 'The rounded superior tip of each lung extending above the first rib into the root of the neck; covered by cervical pleura and suprapleural membrane.' }
+];
+
+/* Button wiring: single-click vs double-click logic */
+const CLICK_DELAY = 300;
+document.querySelectorAll('.label-btn').forEach(btn => {
+  const idx = +btn.dataset.idx;
+  const isPharynx = btn.id === 'pharynxBtn';
+  const isLarynx  = btn.id === 'larynxBtn';
+  const isLeftLung = btn.id === 'leftLungBtn';
+
+  const singleHandler = () => {
+    closeZoom();
+    document.querySelectorAll('.label-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    const lab = anatomyLabels[idx];
+    if (lab) {
+      descDiv.innerHTML = `<b>${lab.name}</b><br>${lab.desc}`;
+      descDiv.style.display = 'block';
+      renderOverlay(idx);
+    }
+    const src = getSourceDesignCoords(idx);
+    clearAllSmoke();
+    if (src) emitSmokeTo(lab.x, lab.y, { count:12, src });
+  };
+
+  if (isPharynx || isLarynx || isLeftLung) {
+    let clickTimer = null;
+    btn.addEventListener('click', (ev)=> {
+      ev.preventDefault();
+      if (clickTimer){ clearTimeout(clickTimer); clickTimer = null; }
+      clickTimer = setTimeout(()=> { clickTimer = null; singleHandler(); }, CLICK_DELAY);
+    });
+    btn.addEventListener('dblclick', (ev)=> {
+      ev.preventDefault();
+      if (clickTimer){ clearTimeout(clickTimer); clickTimer = null; }
+      document.querySelectorAll('.label-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      if (isPharynx) {
+        openZoom('pharynx_3.png', 'Pharynx', pharynxParts, true);
+      } else if (isLarynx) {
+        openZoom('la1.png', 'Larynx', larynxParts, true);
+      } else if (isLeftLung) {
+        openZoom('left.png', 'Left Lung', leftLungParts, true);
+      }
+    });
+  } else {
+    btn.addEventListener('click', (ev)=> { ev.preventDefault(); singleHandler(); });
+  }
+});
+
+/* Initialization */
+function init(){
+  renderOverlay();
+  recreateMarkers();
+}
+window.addEventListener('load', init);
+window.addEventListener('resize', ()=> { renderOverlay(); recreateMarkers(); onWindowResizeForZoom(); });
+
+/* ---------------------------------------
+   S P I R O G R A M  — Unmodified core behaviour
+   (kept as in your original script)
+   --------------------------------------- */
+(function initSpirogram(){
+  const canvas = document.getElementById('plot');
+  const ctx = canvas.getContext('2d');
+
+  const rateValEl = document.getElementById('rateVal');
+  const vtValEl   = document.getElementById('vtVal');
+  const frcValEl  = document.getElementById('frcVal');
+  const durValEl  = document.getElementById('durVal');
+
+  const startBtn = document.getElementById('start');
+  const pauseBtn = document.getElementById('pause');
+  const resetBtn = document.getElementById('reset');
+  const snapBtn  = document.getElementById('snapshot');
+
+  const presetCOPDBtn = document.getElementById('presetCOPD');
+  const presetFibrosisBtn = document.getElementById('presetFibrosis');
+  const presetTBtn = document.getElementById('presetTB');
+  const diseaseDesc = document.getElementById('diseaseDesc');
+
+  let running=false, last=performance.now(), time=0, endTime=Number(durValEl.textContent||20);
+  const history=[];
+  let w,h,dpr;
+  let currentPreset = 'copd';
+  let referenceCurves = [];
+
+  function resizeCanvas(){
+    dpr = Math.max(1, window.devicePixelRatio||1);
+    const rect = canvas.getBoundingClientRect();
+    w = Math.max(400, rect.width);
+    h = Math.max(260, rect.height);
+    canvas.width = Math.floor(w*dpr);
+    canvas.height= Math.floor(h*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    draw();
+  }
+  new ResizeObserver(resizeCanvas).observe(canvas);
+
+  function readNumericValues(){
+    const rr = Number(rateValEl.textContent) || 12;
+    const vt = Number(vtValEl.textContent) || 500;
+    const frc = Number(frcValEl.textContent) || 2400;
+    const dur = Number(durValEl.textContent) || 20;
+    return { rr, vt, frc, dur };
+  }
+
+  function setNumericValues(rr, vt, frc, dur){
+    rateValEl.textContent = rr;
+    vtValEl.textContent = vt;
+    frcValEl.textContent = frc;
+    durValEl.textContent = dur;
+    endTime = Number(dur);
+  }
+
+  function modelVolumeForParams(t, rr, vtValLocal, baseline){
+    const f = Number(rr)/60;
+    const amp = Number(vtValLocal)/2;
+    return baseline + amp*Math.sin(2*Math.PI*f*t);
+  }
+
+  function modelVolumeWithPreset(t){
+    const { rr, vt, frc } = readNumericValues();
+    const f = Number(rr)/60;
+    const amp = Number(vt)/2;
+    const baseline = Number(frc);
+
+    if(currentPreset === 'copd'){
+      const slowComponent = (vt/6) * Math.sin(2*Math.PI*(f/3)*t);
+      const baseWave = Math.sin(2*Math.PI*f*t);
+      const asym = 0.8 + 0.2 * Math.sin(2*Math.PI*f*t);
+      return baseline + amp * baseWave * asym + slowComponent;
+    }
+    if(currentPreset === 'fibrosis'){
+      const baseWave = Math.sin(2*Math.PI*f*t);
+      const shaping = 1 - 0.12*Math.abs(baseWave);
+      return baseline + amp * baseWave * shaping;
+    }
+    if(currentPreset === 'tb'){
+      const baseWave = Math.sin(2*Math.PI*f*t);
+      const irregular = 0.04 * Math.sin(2*Math.PI*(f*1.7)*t + 0.8);
+      return baseline + amp * baseWave * (0.95 - 0.08*Math.sin(2*Math.PI*f*t)) + amp * irregular;
+    }
+    return baseline + amp * Math.sin(2*Math.PI*f*t);
+  }
+
+  function loop(){
+    if(!running) return;
+    const now=performance.now();
+    const dt=Math.min(0.05,(now-last)/1000);
+    last=now;
+    time+=dt;
+    const tClamped=Math.min(time,endTime);
+    const V = modelVolumeWithPreset(tClamped);
+    history.push({t:tClamped,V});
+    if(time>=endTime){ running=false; document.getElementById('done').style.display='inline-block'; }
+    draw();
+    if(running) requestAnimationFrame(loop);
+  }
+
+  function map(v,a1,a2,b1,b2){ return b1 + (v-a1)*(b2-b1)/(a2-a1); }
+  function niceStep(span){ const raw=span/5; const pow=10**Math.floor(Math.log10(raw)); const frac=raw/pow; let n; if(frac<1.5) n=1*pow; else if(frac<3) n=2*pow; else if(frac<7) n=5*pow; else n=10*pow; return n; }
+
+  function drawGrid(){
+    ctx.save();
+    ctx.strokeStyle='#15243f';
+    ctx.lineWidth=1;
+    for(let x=60;x<w-20;x+=40){ ctx.beginPath(); ctx.moveTo(x,20); ctx.lineTo(x,h-30); ctx.stroke(); }
+    for(let y=20;y<h-30;y+=40){ ctx.beginPath(); ctx.moveTo(60,y); ctx.lineTo(w-20,y); ctx.stroke(); }
+    ctx.strokeStyle='#294772';
+    ctx.strokeRect(60,20,(w-20)-60,(h-30)-20);
+    ctx.restore();
+  }
+  function drawDashed(x1,y1,x2,y2){ ctx.save(); ctx.setLineDash([6,6]); ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.setLineDash([]); ctx.restore(); }
+
+  function drawXTicks(tMin,tMax,xMap){
+    ctx.save(); ctx.fillStyle='#94a3b8'; ctx.font='11px Inter, system-ui, sans-serif'; ctx.textAlign='center';
+    const step=niceStep((tMax-tMin)/8);
+    for(let t=Math.ceil(tMin/step)*step; t<=tMax+1e-6; t+=step){
+      const x=xMap(t);
+      ctx.beginPath(); ctx.moveTo(x,h-30); ctx.lineTo(x,h-26); ctx.strokeStyle='#294772'; ctx.stroke();
+      ctx.fillText((t).toFixed(0), x, h-10);
+    }
+    ctx.restore();
+  }
+  function drawYTicks(yMin,yMax,yMap){
+    ctx.save(); ctx.fillStyle='#94a3b8'; ctx.font='11px Inter, system-ui, sans-serif'; ctx.textAlign='right';
+    const step=niceStep((yMax-yMin)/6);
+    for(let yv=Math.ceil(yMin/step)*step; yv<=yMax+1e-6; yv+=step){
+      const y=yMap(yv);
+      ctx.beginPath(); ctx.moveTo(60,y); ctx.lineTo(64,y); ctx.strokeStyle='#294772'; ctx.stroke();
+      ctx.fillText(yv.toFixed(0), 56, y+4);
+    }
+    ctx.restore();
+  }
+
+  function roundRect(ctx, x, y, w, h, r, fill, stroke){
+    if (typeof r === 'undefined') r = 5;
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+    if(fill){ ctx.fillStyle = ctx.fillStyle || '#000'; ctx.fill(); }
+    if(stroke){ ctx.stroke(); }
+  }
+
+  function drawReferenceCurves(referenceCurves, xMap, yMap) {
+    referenceCurves.forEach((rc) => {
+      if(!rc.points || !rc.points.length) return;
+      ctx.beginPath();
+      rc.points.forEach((p,i)=>{
+        const x = xMap(p.t), y = yMap(p.V);
+        if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      });
+
+      if(rc.label === 'Healthy'){
+        ctx.lineWidth = 2.4;
+        ctx.strokeStyle = '#2fd7e6';
+        ctx.globalAlpha = 0.95;
+        ctx.shadowColor = 'rgba(47,215,230,0.08)';
+        ctx.shadowBlur = 8;
+      } else {
+        ctx.lineWidth = 1.8;
+        ctx.strokeStyle = rc.color || '#f59e0b';
+        ctx.globalAlpha = 0.95;
+        ctx.shadowBlur = 0;
+      }
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+
+      try {
+        const mid = rc.points[Math.floor(rc.points.length*0.52)];
+        if (mid) {
+          const lx = xMap(mid.t), ly = yMap(mid.V);
+          ctx.save();
+          ctx.font = '12px Inter, system-ui, sans-serif';
+          ctx.fillStyle = rc.label === 'Healthy' ? 'rgba(47,215,230,0.95)' : '#c9d4e5';
+          ctx.textAlign = 'center';
+          ctx.fillText(rc.label, lx + 14, ly - 6);
+          ctx.restore();
+        }
+      } catch(e){}
+    });
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,w,h);
+    drawGrid();
+    ctx.save();
+    ctx.fillStyle='#c9d4e5'; ctx.font='12px Inter, system-ui, sans-serif';
+    ctx.fillText('Time (s)', w-70, h-8);
+    ctx.save(); ctx.translate(18, 40); ctx.rotate(-Math.PI/2); ctx.fillText('Volume (mL)', 0, 0); ctx.restore();
+
+    const { dur, frc, vt } = readNumericValues();
+    const durSec = Number(dur);
+    const tMin=0; const tMax=Math.max(durSec,1);
+    const baseline=Number(frc); const amp=Number(vt)/2;
+    const yMin=baseline-amp-200; const yMax=baseline+amp+200;
+    const xMap=(t)=>map(t,tMin,tMax,60,w-20);
+    const yMap=(V)=>map(V,yMax,yMin,20,h-30);
+    const yFRC=yMap(baseline);
+    ctx.strokeStyle='#2a3c61'; ctx.lineWidth=1;
+    drawDashed(60,yFRC,w-20,yFRC);
+
+    // draw reference curves (Healthy only)
+    if(referenceCurves.length){
+      drawReferenceCurves(referenceCurves, xMap, yMap);
+    }
+
+    // draw live history (only disease working trace) - rendered only if history has content (Start pressed)
+    if(history.length>1){
+      ctx.beginPath();
+      for(let i=0;i<history.length;i++){
+        const p=history[i];
+        const x=xMap(p.t); const y=yMap(p.V);
+        if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+      ctx.lineWidth=2.8;
+      let color = getComputedStyle(document.documentElement).getPropertyValue('--accent') || '#22d3ee';
+      if(currentPreset === 'copd') color = '#f59e0b';
+      if(currentPreset === 'fibrosis') color = '#ef476f';
+      if(currentPreset === 'tb') color = '#8ecae6';
+      ctx.strokeStyle = color;
+      ctx.stroke();
+    }
+
+    const Vlive = history.length? history[history.length-1].V : modelVolumeWithPreset(0);
+    const tlive = history.length? history[history.length-1].t : 0;
+    ctx.fillStyle='#c9d4e5';
+    ctx.fillText(`t: ${tlive.toFixed(1)} s`, w-160, 24);
+    ctx.fillText(`V(t): ${Vlive.toFixed(0)} mL`, w-160, 40);
+    ctx.fillText(`RR: ${readNumericValues().rr} bpm`, w-160, 56);
+    ctx.fillText(`VT: ${readNumericValues().vt} mL`, w-160, 72);
+
+    drawXTicks(tMin,tMax,xMap);
+    drawYTicks(yMin,yMax,yMap);
+    ctx.restore();
+  }
+
+  resizeCanvas();
+
+  function clearPresetSelection(){
+    [presetCOPDBtn, presetFibrosisBtn, presetTBtn].forEach(b => b.classList.remove('active'));
+  }
+
+  function makeReferenceCurveFromParams(params, label){
+    const pts = [];
+    const step = Math.min(0.02, params.dur / 800);
+    for(let t=0; t<=params.dur+1e-9; t+=step){
+      let V;
+      if(label === 'Healthy'){
+        const healthyRate = 12;
+        const healthyVT = Math.max(380, Math.min(500, Math.round(params.vt * 1.0)));
+        const baseline = params.frc;
+        V = modelVolumeForParams(t, healthyRate, healthyVT * 0.92, baseline);
+      } else {
+        V = modelVolumeForParams(t, params.rate, params.vt, params.frc);
+      }
+      pts.push({t: t, V});
+    }
+    return pts;
+  }
+
+  function applyPreset(presetName){
+    running = false;
+    history.length = 0;
+    referenceCurves = [];
+    clearPresetSelection();
+
+    let params, label, color;
+    if(presetName === 'copd'){
+      presetCOPDBtn.classList.add('active');
+      label = 'COPD';
+      params = { rate:10, vt:400, frc:3200, dur:20,
+        desc: '<b>COPD (obstructive):</b> Airflow limitation and air trapping. FEV₁/FVC &lt; 0.7. Curve: concave/slow exhalation with prolonged tail and elevated baseline (air trapping).',
+      };
+      color = '#f59e0b';
+      currentPreset = 'copd';
+    } else if(presetName === 'fibrosis'){
+      presetFibrosisBtn.classList.add('active');
+      label = 'Fibrotic';
+      params = { rate:20, vt:300, frc:1800, dur:20,
+        desc: '<b>Fibrotic (restrictive):</b> Low lung volumes and stiff lungs. FEV₁/FVC normal or increased. Curve: steep early rise but low total volume (compressed amplitude).',
+      };
+      color = '#ef476f';
+      currentPreset = 'fibrosis';
+    } else if(presetName === 'tb'){
+      presetTBtn.classList.add('active');
+      label = 'Post-TB';
+      params = { rate:16, vt:350, frc:2000, dur:20,
+        desc: '<b>Post-TB / mixed:</b> Mixed restrictive and obstructive features depending on scarring and airway damage. Curve: reduced total volume; shape may be mixed (concavity + early plateau).',
+      };
+      color = '#8ecae6';
+      currentPreset = 'tb';
+    } else return;
+
+    setNumericValues(params.rate, params.vt, params.frc, params.dur);
+    diseaseDesc.innerHTML = params.desc;
+
+    const healthyParams = { rate:12, vt:500, frc: params.frc, dur: params.dur };
+    const healthyPts = makeReferenceCurveFromParams(healthyParams, 'Healthy');
+    referenceCurves.push({ label: 'Healthy', points: healthyPts, color: '#2fd7e6' });
+
+    history.length = 0;
+    time = 0;
+    document.getElementById('done').style.display = 'none';
+    draw();
+  }
+
+  presetCOPDBtn.addEventListener('click', ()=> applyPreset('copd'));
+  presetFibrosisBtn.addEventListener('click', ()=> applyPreset('fibrosis'));
+  presetTBtn.addEventListener('click', ()=> applyPreset('tb'));
+
+  startBtn.addEventListener('click', ()=>{
+    if(time>=endTime || history.length===0){ time=0; history.length=0; }
+    endTime = readNumericValues().dur;
+    running=true; document.getElementById('done').style.display='none'; last=performance.now(); loop();
+  });
+
+  pauseBtn.addEventListener('click', ()=>{ running=false; });
+  resetBtn.addEventListener('click', ()=>{
+    running=false;
+    time=0;
+    history.length=0;
+    document.getElementById('done').style.display='none';
+    referenceCurves = referenceCurves.filter(r => r.label === 'Healthy');
+    draw();
+  });
+  snapBtn.addEventListener('click', ()=>{ const a=document.createElement('a'); a.download='spirogram.png'; a.href=canvas.toDataURL('image/png'); a.click(); });
+
+  applyPreset('copd');
+
+})();
+</script>
 </body>
 </html>
