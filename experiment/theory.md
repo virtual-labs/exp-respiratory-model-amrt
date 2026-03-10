@@ -103,3 +103,48 @@ The lungs are the primary organs of the respiratory system and are located withi
 The diaphragm is a dome-shaped skeletal muscle that forms the floor of the thoracic cavity and separates it from the abdominal cavity. It plays a central role in the mechanics of breathing. During inspiration, the diaphragm contracts and moves downward, increasing the volume of the thoracic cavity and creating negative pressure that draws air into the lungs. During expiration, the diaphragm relaxes and returns to its dome-shaped position, decreasing thoracic volume and forcing air out of the lungs. This rhythmic contraction and relaxation of the diaphragm, along with the action of intercostal muscles, enables continuous ventilation of the lungs and efficient gas exchange.
 
 &nbsp;
+
+
+### Pulmonary Function Test (PFT)
+
+Pulmonary Function Tests (PFTs) are a group of non-invasive diagnostic procedures used to evaluate the functional status of the respiratory system. These tests measure how effectively the lungs perform their primary physiological roles, including ventilation, gas exchange, and airflow regulation. PFTs are widely used in clinical medicine and biomedical research to diagnose respiratory diseases, monitor disease progression, and evaluate treatment outcomes. The tests primarily assess lung volumes, airflow rates, and gas diffusion capacity. Among the various PFT techniques, spirometry is the most used method because it provides rapid and reliable measurements of lung function. It helps clinicians detect obstructive and restrictive pulmonary disorders by analyzing airflow patterns during breathing.
+
+&nbsp;
+
+### Spirogram
+A spirogram is the graphical output produced by a spirometer that represents the variation of lung volume with respect to time during breathing. It typically displays the respiratory cycle consisting of inspiration (air entering the lungs) and expiration (air leaving the lungs). In a standard spirogram, the vertical axis represents lung volume, while the horizontal axis represents time. During inspiration, the curve rises as lung volume increases, and during expiration, the curve falls as air is expelled from the lungs. The spirogram provides valuable information about the mechanics of breathing, including tidal breathing patterns, forced expiratory maneuvers, and maximum lung capacities. By examining the shape and amplitude of the spirogram, clinicians can assess pulmonary performance and identify abnormalities associated with respiratory diseases(Fig.3).
+
+&nbsp;
+<p align="center">
+  <img src="images/3.jpg" title="Spirometry Device" />
+  <br />
+  <i>Figure 3. Spirometry Device
+
+Pic courtesy: https://www.tradeindia.com/products/compact-and-portable-spiro-tech-handheld-pft-machine-for-hospitals-and-clinics-2114861.html
+
+</i>
+</p>
+
+&nbsp;
+
+### Spirometric Parameters
+
+Spirometric parameters are quantitative measurements derived from spirometry that describe lung function and ventilatory performance. One of the most basic parameters is Tidal Volume (VT), which refers to the amount of air inhaled or exhaled during normal quiet breathing. Another important parameter is Respiratory Rate (RR), defined as the number of breathing cycles per minute. Forced Vital Capacity (FVC) represents the maximum volume of air that can be forcibly exhaled after a full inspiration. Forced Expiratory Volume in one second (FEV1) measures the volume of air expelled in the first second of a forced expiration and is a critical indicator of airway obstruction. The ratio FEV1/FVC is widely used for clinical diagnosis of respiratory diseases. Other parameters include Inspiratory Reserve Volume (IRV), Expiratory Reserve Volume (ERV), Residual Volume (RV), and Functional Residual Capacity (FRC), each reflecting different aspects of lung ventilation and air storage within the respiratory system.
+
+&nbsp;
+
+
+#### Breathing Disorder Conditions
+
+Breathing disorders arise when the normal mechanics of ventilation or gas exchange are impaired due to structural or functional abnormalities in the lungs or airways. These disorders are broadly classified into obstructive lung diseases and restrictive lung diseases. Obstructive diseases, such as Chronic Obstructive Pulmonary Disease (COPD), asthma, and chronic bronchitis, are characterized by increased airway resistance and difficulty in expelling air from the lungs. In contrast, restrictive lung diseases, including pulmonary fibrosis, sarcoidosis, and certain neuromuscular disorders, reduce lung expansion and limit the total lung capacity. Infectious conditions like tuberculosis can also damage lung tissue, altering normal respiratory mechanics (Fig.4). These pathological changes significantly affect airflow dynamics and lung volumes, which can be detected through spirometry.
+
+Breathing disorders such as Chronic Obstructive Pulmonary Disease (COPD), fibrotic lung disease, and pulmonary tuberculosis produce characteristic changes in spirometric measurements and spirogram patterns due to alterations in lung structure and airflow dynamics. COPD is an obstructive lung disease in which airway narrowing and loss of elastic recoil cause airflow limitation and air trapping, leading to a marked reduction in FEV₁ and a decreased FEV₁/FVC ratio (< 0.7), with a prolonged and concave expiratory curve in the spirogram. In contrast, fibrotic lung disease represents a restrictive condition characterized by stiff lung tissue and reduced lung compliance, resulting in decreased vital capacity (VC), forced vital capacity (FVC), and total lung capacity (TLC) while the FEV₁/FVC ratio remains normal or slightly increased; the spirogram therefore shows reduced amplitude due to smaller lung volumes. Pulmonary tuberculosis can produce restrictive or mixed ventilatory defects depending on the extent of lung tissue damage, leading to reduced VC and FVC and irregular breathing patterns in the spirogram. Overall, these pathological conditions alter normal respiratory mechanics, and their distinct spirometric signatures help clinicians differentiate between obstructive and restrictive pulmonary disorders and assess the severity of respiratory impairment
+
+&nbsp;
+<p align="center">
+  <img src="images/4.png" title="Spirogram patterns" />
+  <br />
+  <i>Figure 4. Spirogram patterns for tuberculosis conditions. The variations in the respiratory rate, tidal volume, functional residual capacity were observed from the spirogram</i>
+</p>
+
+&nbsp;
