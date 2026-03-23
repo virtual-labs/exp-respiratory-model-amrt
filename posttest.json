@@ -1,0 +1,75 @@
+
+{
+  "version": 2.0,
+  "questions": [
+    {
+          "question": "1. A spirogram represents:",
+      "answers": {
+        "a": "Heart rate changes",
+        "b": "Lung volume changes during breathing",
+        "c": "Blood pressure changes",
+        "d": "Oxygen level in blood"
+      },
+ 
+      "correctAnswer": "b",
+      "difficulty": "beginner"
+    },   
+
+
+    {
+      "question": "2. During inspiration, the diaphragm:",
+      "answers": {
+        "a": "Relaxes and moves upward",
+        "b": "Contracts and moves downward",
+        "c": "Remains stationary",
+        "d": "Contracts and moves upward"
+      },
+      
+      "correctAnswer": "b",
+      "difficulty": "beginner"
+    },
+
+    {
+      "question": "3. Which of the following lung volumes represents the air inhaled or exhaled during normal breathing?",
+      "answers": {
+        "a": "Residual Volume",
+        "b": "Vital Capacity",
+        "c": "Tidal Volume",
+        "d": "Total Lung Capacity"
+      },
+      
+      "correctAnswer": "c",
+      "difficulty": "beginner"
+    },
+
+
+
+    {
+      "question": "4. The bronchial tree refers to:",
+      "answers": {
+        "a": "The branching network of bronchi and bronchioles inside the lungs",
+        "b": "The blood vessels surrounding the lungs",
+        "c": "The muscle layers of the diaphragm",
+        "d": "The outer membrane covering the lungs"
+      },
+      
+      "correctAnswer": "a",
+      "difficulty": "beginner"
+    },
+
+
+    
+    {
+      "question": "5. Functional Residual Capacity (FRC) is defined as:",
+      "answers": {
+        "a": "Air left in lungs after forced expiration",
+        "b": "Air remaining in lungs after normal expiration",
+        "c": "Total lung capacity",
+        "d": "Air inhaled during deep breathing"
+      },
+     
+      "correctAnswer": "b",
+      "difficulty": "beginner"
+    }
+  ]
+}	 
